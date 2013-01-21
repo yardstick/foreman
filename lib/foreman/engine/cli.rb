@@ -68,9 +68,17 @@ class Foreman::Engine::CLI < Foreman::Engine
   end
 
   def shutdown
+    if exit_with_code?
+      exit_code = exit_codes.reduce(0) { |sum, code| sum + code }
+      exit exit_code
+    end
   end
 
 private
+
+  def exit_with_code?
+    options.fetch('exitcode', false)
+  end
 
   def name_padding
     @name_padding ||= begin

@@ -24,6 +24,8 @@ class Foreman::CLI < Thor
   method_option :formation, :type => :string,  :aliases => "-m", :banner => '"alpha=5,bar=3"'
   method_option :port,      :type => :numeric, :aliases => "-p"
   method_option :timeout,   :type => :numeric, :aliases => "-t", :desc => "Specify the amount of time (in seconds) processes have to shudown gracefully before receiving a SIGKILL, defaults to 5."
+  method_option :survive,   :type => :boolean, :aliases => "-s", :desc => "If a process dies, don't kill everything else, just keep on trucking. Defaults to false"
+  method_option :exitcode,  :type => :boolean, :aliases => "-x", :desc => "Exit with the sum of exit codes for the process. Defaults to false"
 
   class << self
     # Hackery. Take the run method away from Thor so that we can redefine it.

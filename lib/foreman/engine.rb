@@ -12,6 +12,7 @@ class Foreman::Engine
   attr_reader :env
   attr_reader :options
   attr_reader :processes
+  attr_reader :exit_codes
 
   # Create an +Engine+ for running processes
   #
@@ -27,12 +28,13 @@ class Foreman::Engine
     @options[:formation] ||= (options[:concurrency] || "all=1")
     @options[:timeout] ||= 5
 
-    @env       = {}
-    @mutex     = Mutex.new
-    @names     = {}
-    @processes = []
-    @running   = {}
-    @readers   = {}
+    @exit_codes = []
+    @env        = {}
+    @mutex      = Mutex.new
+    @names      = {}
+    @processes  = []
+    @running    = {}
+    @readers    = {}
   end
 
   # Start the processes registered to this +Engine+
@@ -49,7 +51,7 @@ class Foreman::Engine
     spawn_processes
     watch_for_output
     sleep 0.1
-    watch_for_termination { terminate_gracefully }
+    wait_for_termination
     shutdown
   end
 
@@ -294,8 +296,32 @@ private
     end
   end
 
+  def wait_for_termination
+    if survive?
+      let_all_finish
+    else
+      watch_for_termination { terminate_gracefully }
+    end
+  end
+
+  def survive?
+    options.fetch('survive', false)
+  end
+
+  def let_all_finish
+    loop do
+      pid, status = Process.wait2
+      @exit_codes << status.exitstatus
+      output_with_mutex name_for(pid), termination_message_for(status)
+      @running.delete(pid)
+      break if @running.empty?
+    end
+  rescue Errno::ECHILD
+  end
+
   def watch_for_termination
     pid, status = Process.wait2
+    @exit_codes << status.exitstatus
     output_with_mutex name_for(pid), termination_message_for(status)
     @running.delete(pid)
     yield if block_given?
